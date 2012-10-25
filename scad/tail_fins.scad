@@ -1,27 +1,40 @@
 // Model rocket tail fins by Lutz Paelke (lpaelke)
 // CC BY-NC-SA 3.0
+// Enhanced by Giles Hall (C) 10-2012
 
-height=50;
-radius_out=11;
-radius_in=10;
-guide_radius_in=2.5;
-guide_radius_out=3.5;
-fins=4;
-span=80;
-fin_thick=1;
-endchord=30;
+fins = 4;
+fin_span = 80;
+fin_thickness = 1.5;
+fin_endchord = 30;
+
+base_height = 76.2;     // 3 inches
+collar_height = 7.62;   // .3 inches
+
+collar_overlap = 8;
+
+collar_outer_dia = 18.3;
+collar_inner_dia = 14.5;
+base_inner_dia = 18.2;
+base_outer_dia = 20.54;
+
+guide_inner_dia = 4.75;
+guide_outer_dia = guide_inner_dia + 1;
 
 module fin(angle, deflection)
 {
     rotate([0,0,angle]) polyhedron(points=[
                                             // inner-top
-                                            [radius_in, fin_thick / 2 + deflection, 0], [radius_in, -fin_thick / 2 + deflection, 0],
+                                            [base_inner_dia / 2, fin_thickness / 2 + deflection, 0], 
+                                            [base_inner_dia / 2, -fin_thickness / 2 + deflection, 0],
                                             // outer-top
-                                            [span / 2, fin_thick / 2 + deflection, 0], [span / 2, -fin_thick / 2 + deflection, 0],
+                                            [fin_span / 2, fin_thickness / 2 + deflection, 0], 
+                                            [fin_span / 2, -fin_thickness / 2 + deflection, 0],
                                             // outer-bottom
-                                            [span / 2, fin_thick / 2 - deflection, endchord], [span / 2, -fin_thick / 2 - deflection, endchord],
+                                            [fin_span / 2, fin_thickness / 2 - deflection, fin_endchord], 
+                                            [fin_span / 2, -fin_thickness / 2 - deflection, fin_endchord],
                                             // inner-bottom
-                                            [radius_in, fin_thick / 2 - deflection, height], [radius_in, -fin_thick / 2 - deflection, height]], 
+                                            [base_inner_dia / 2, fin_thickness / 2 - deflection, base_height], 
+                                            [base_inner_dia / 2, -fin_thickness / 2 - deflection, base_height]], 
                                     triangles=[[0, 1, 2],  [1, 3, 2], 
                                                 [2, 3, 4],  [3, 5, 4], 
                                                 [4, 5, 6],  [5, 7, 6], 
@@ -30,23 +43,45 @@ module fin(angle, deflection)
                                                 [1, 7, 3],  [3, 7, 5]]);
 }
 
+steps = 6;
+step = (base_outer_dia - collar_inner_dia) / steps;
 
 difference()
 {
     union()
     {
-		cylinder(h=height, r=radius_out, $fn=60);
+        // intial body
+		cylinder(h=base_height, r=base_outer_dia / 2, $fn=60);
+        // fins
 		for (i = [0:fins - 1])
         {
-                fin(i * (360 / fins), 5);
+                fin(i * (360 / fins), 0);
 		}
+        // guide
 		rotate([0, 0, 180 / fins]) 
-            translate([radius_out + guide_radius_in, 0, 0]) 
+            translate([base_outer_dia / 2 + guide_inner_dia / 2, 0, 0]) 
                 difference()
                 {
-                    cylinder(h=height, r=guide_radius_out, $fn=60);
-                    cylinder(h=height, r=guide_radius_in, $fn=60);
+                    cylinder(h=base_height, r=guide_outer_dia / 2, $fn=60);
+                    cylinder(h=base_height, r=guide_inner_dia / 2, $fn=60);
                 }	
+        // collar
+        translate([0, 0, base_height - collar_overlap + 10]) 
+            difference()
+            {
+                cylinder(h=collar_height + collar_overlap, r=collar_outer_dia / 2, $fn=60);
+                cylinder(h=collar_height + collar_overlap, r=collar_inner_dia / 2, $fn=60);
+            }
+		for (i = [0:steps - 1])
+        {
+            translate([0, 0, base_height - collar_overlap - (i * .5) + 10]) 
+                difference()
+                {
+                    cylinder(h=.5, r=base_outer_dia / 2, $fn=60);
+                    cylinder(h=.5, r=(step * i + collar_inner_dia) / 2, $fn=60);
+                }
+		}
     }
-    cylinder(h=height, r=radius_in, $fn=60);
+    // inner (subtractive) cynlinder
+    cylinder(h=base_height, r=base_inner_dia / 2, $fn=60);
 }
